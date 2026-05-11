@@ -8,13 +8,13 @@ from .models import Customer, Invoice, Item
 
 import fitz
 import os
+import io
 from decimal import Decimal
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PDF_PATH = os.path.join(BASE_DIR, "template.pdf")
-OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
-
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+PDF_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "template.pdf"
+)
 
 
 def safe_decimal(value, default="0.00"):
@@ -37,20 +37,35 @@ def wipe_rect(page, rect):
 
 def write_in_rect(page, rect, text, fontsize=9):
     r = fitz.Rect(rect)
-    page.insert_text((r.x0 + 2, r.y1 - 2), str(text), fontsize=fontsize)
+    page.insert_text(
+        (r.x0 + 2, r.y1 - 2),
+        str(text),
+        fontsize=fontsize
+    )
 
 
-# ✅ FIXED RIGHT ALIGN (DISCOUNT)
 def write_in_rect_right(page, rect, text, fontsize=9):
     r = fitz.Rect(rect)
+
     text = str(text)
-    text_width = fitz.get_text_length(text, fontsize=fontsize)
+
+    text_width = fitz.get_text_length(
+        text,
+        fontsize=fontsize
+    )
+
     x = r.x1 - text_width - 2
     y = r.y1 - 3
-    page.insert_text((x, y), text, fontsize=fontsize)
+
+    page.insert_text(
+        (x, y),
+        text,
+        fontsize=fontsize
+    )
 
 
 def login_view(request):
+
     if request.method == "POST":
 
         user = authenticate(
@@ -69,7 +84,10 @@ def login_view(request):
             {"error": "Invalid credentials"}
         )
 
-    return render(request, "invoices/login.html")
+    return render(
+        request,
+        "invoices/login.html"
+    )
 
 
 def logout_view(request):
@@ -79,8 +97,14 @@ def logout_view(request):
 
 @login_required
 def index(request):
+
     customers = Customer.objects.all()
-    return render(request, "invoices/index.html", {"customers": customers})
+
+    return render(
+        request,
+        "invoices/index.html",
+        {"customers": customers}
+    )
 
 
 @login_required
@@ -90,6 +114,7 @@ def generate_invoice(request):
 
         customer, created = Customer.objects.get_or_create(
             name=request.POST.get("customer_name"),
+
             defaults={
                 "address": request.POST.get("address", ""),
                 "ntn": request.POST.get("ntn", ""),
@@ -98,9 +123,11 @@ def generate_invoice(request):
         )
 
         if not created:
+
             customer.address = request.POST.get("address", "")
             customer.ntn = request.POST.get("ntn", "")
             customer.sales_tax = request.POST.get("sales_tax", "")
+
             customer.save()
 
         invoice = Invoice.objects.create(
@@ -132,14 +159,18 @@ def generate_invoice(request):
             gross = Decimal(price) * Decimal(qty)
 
             discount_amount = (
-                Decimal(price) * Decimal(disc) / Decimal("100")
+                Decimal(price)
+                * Decimal(disc)
+                / Decimal("100")
             ) * Decimal(qty)
 
             total_gross += gross
             total_discount += discount_amount
 
             discounted_price = Decimal(price) - (
-                Decimal(price) * Decimal(disc) / Decimal("100")
+                Decimal(price)
+                * Decimal(disc)
+                / Decimal("100")
             )
 
             amount = discounted_price * Decimal(qty)
@@ -157,18 +188,59 @@ def generate_invoice(request):
             )
 
         doc = fitz.open(PDF_PATH)
+
         page = doc[0]
 
         HEADER_COORDS = {
-            "customer_name": (125.84, 110.15, 272.87, 122.43),
-            "address": (125.84, 124.65, 347.06, 134.70),
-            "invoice_no": (482.60, 110.13, 524.41, 120.18),
-            "date": (479.85, 120.98, 523.99, 131.03),
-            "license_no": (75.06, 181.90, 173.89, 191.95),
+            "customer_name": (
+                125.84,
+                110.15,
+                272.87,
+                122.43
+            ),
+
+            "address": (
+                125.84,
+                124.65,
+                347.06,
+                134.70
+            ),
+
+            "invoice_no": (
+                482.60,
+                110.13,
+                524.41,
+                120.18
+            ),
+
+            "date": (
+                479.85,
+                120.98,
+                523.99,
+                131.03
+            ),
+
+            "license_no": (
+                75.06,
+                181.90,
+                173.89,
+                191.95
+            ),
         }
 
-        NTN_VALUE = (95, 158, 200, 168)
-        SALES_TAX_VALUE = (110, 170, 220, 180)
+        NTN_VALUE = (
+            95,
+            158,
+            200,
+            168
+        )
+
+        SALES_TAX_VALUE = (
+            110,
+            170,
+            220,
+            180
+        )
 
         TABLE_COLS = {
             "sr": 54.7,
@@ -184,8 +256,12 @@ def generate_invoice(request):
         ROW_START_Y = 221.4
         ROW_HEIGHT = 9.5
 
-        # ──────── INVOICE BREAKUP RECTANGLES ────────
-        GROSS_VALUE_RECT = (535, 260, 590, 280)
+        GROSS_VALUE_RECT = (
+            535,
+            260,
+            590,
+            280
+        )
 
         DISCOUNT_VALUE_RECT = (
             535,
@@ -194,7 +270,12 @@ def generate_invoice(request):
             287.63
         )
 
-        NET_PAYABLE_RECT = (535, 320, 590, 345)
+        NET_PAYABLE_RECT = (
+            535,
+            320,
+            590,
+            345
+        )
 
         COMPANY_TOTAL_RECT = (
             535,
@@ -220,10 +301,27 @@ def generate_invoice(request):
         page.apply_redactions()
 
         for key, rect in HEADER_COORDS.items():
-            write_in_rect(page, rect, data.get(key, ""), 9)
 
-        write_in_rect(page, NTN_VALUE, customer.ntn, 9)
-        write_in_rect(page, SALES_TAX_VALUE, customer.sales_tax, 9)
+            write_in_rect(
+                page,
+                rect,
+                data.get(key, ""),
+                9
+            )
+
+        write_in_rect(
+            page,
+            NTN_VALUE,
+            customer.ntn,
+            9
+        )
+
+        write_in_rect(
+            page,
+            SALES_TAX_VALUE,
+            customer.sales_tax,
+            9
+        )
 
         table_rect = fitz.Rect(
             50,
@@ -233,6 +331,7 @@ def generate_invoice(request):
         )
 
         wipe_rect(page, table_rect)
+
         page.apply_redactions()
 
         for i in range(len(names)):
@@ -247,7 +346,9 @@ def generate_invoice(request):
             disc = safe_decimal(discounts[i])
 
             discounted_price = Decimal(price) - (
-                Decimal(price) * Decimal(disc) / Decimal("100")
+                Decimal(price)
+                * Decimal(disc)
+                / Decimal("100")
             )
 
             amount = discounted_price * Decimal(qty)
@@ -314,7 +415,6 @@ def generate_invoice(request):
             9
         )
 
-        # ✅ FINAL DISCOUNT FIX
         write_in_rect_right(
             page,
             DISCOUNT_VALUE_RECT,
@@ -336,15 +436,20 @@ def generate_invoice(request):
             9
         )
 
-        output_file = os.path.join(
-            OUTPUT_DIR,
-            f"{invoice.invoice_no}.pdf"
-        )
+        pdf_bytes = io.BytesIO()
+        
+        page.clean_contents()
+        doc.save(pdf_bytes)
 
-        doc.save(output_file)
         doc.close()
 
+        pdf_bytes.seek(0)
+
         return FileResponse(
-            open(output_file, "rb"),
-            as_attachment=True
+            pdf_bytes,
+            as_attachment=True,
+            filename=f"{invoice.invoice_no}.pdf",
+            content_type="application/pdf"
         )
+
+    return redirect("index")
