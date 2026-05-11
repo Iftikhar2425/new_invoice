@@ -116,7 +116,7 @@
 
         <!-- CUSTOMER DROPDOWN -->
         <label>Select Customer</label>
-        <select id="customerDropdown" onchange="fillCustomer()" required>
+        <select id="customerDropdown" onchange="fillCustomer()">
             <option value="">-- Search & Select Customer --</option>
             {% for c in customers %}
             <option value="{{ c.id }}"
