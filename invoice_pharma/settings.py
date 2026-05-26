@@ -29,13 +29,15 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*",  ".vercel.app",]
 
 
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://*.vercel.app",
+    "https://new-invoice-zeta.vercel.app",
+
 ]
 
 SESSION_COOKIE_SECURE = True
